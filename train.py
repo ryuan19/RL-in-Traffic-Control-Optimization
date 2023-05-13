@@ -119,7 +119,7 @@ class Agent:
                 ),
                 "reward_memory":np.zeros(self.max_mem, dtype=np.float32),
                 "action_memory": np.zeros(self.max_mem, dtype=np.int32),
-                "terminal_memory": np.zeros(self.max_mem, dtype=np.bool),
+                "terminal_memory": np.zeros(self.max_mem, dtype=np.bool_),
                 "mem_cntr": 0,
                 "iter_cntr": 0,
             }
@@ -184,13 +184,7 @@ class Agent:
 
 
 def run(train=True,model_name="model",epochs=50,steps=500,ard=False):
-    if ard:
-        arduino = serial.Serial(port='COM4', baudrate=9600, timeout=.1)
-        def write_read(x):
-            arduino.write(bytes(x, 'utf-8'))
-            time.sleep(0.05)
-            data = arduino.readline()
-            return data
+
     """execute the TraCI control loop"""
     epochs = epochs
     steps = steps
@@ -217,18 +211,22 @@ def run(train=True,model_name="model",epochs=50,steps=500,ard=False):
 
     if not train:
         brain.Q_eval.load_state_dict(torch.load(f'models/{model_name}.bin',map_location=brain.Q_eval.device))
-
     print(brain.Q_eval.device)
     traci.close()
     for e in range(epochs):
+        print('IN THE EPOCH LOOP')
         if train:
             traci.start(
             [checkBinary("sumo"), "-c", "configuration.sumocfg", "--tripinfo-output", "tripinfo.xml"]
             )
         else:
+            sumoBinary = checkBinary('sumo-gui')
+            print('SUMOBINARY: ', sumoBinary)
             traci.start(
-            [checkBinary("sumo-gui"), "-c", "configuration.sumocfg", "--tripinfo-output", "tripinfo.xml"]
+            [sumoBinary, "-c", "configuration.sumocfg", "--tripinfo-output", "tripinfo.xml"]
             )
+            
+        print('AFTER THE SECOND TRACI START')
 
         print(f"epoch: {e}")
         select_lane = [
@@ -286,10 +284,6 @@ def run(train=True,model_name="model",epochs=50,steps=500,ard=False):
                     phaseDuration(junction, 6, select_lane[lane][0])
                     phaseDuration(junction, min_duration + 10, select_lane[lane][1])
 
-                    if ard:
-                        ph = str(traci.trafficlight.getPhase("0"))
-                        value = write_read(ph)
-
                     traffic_lights_time[junction] = min_duration + 10
                     if train:
                         brain.learn(junction_number)
@@ -344,12 +338,6 @@ def get_options():
         default=500,
         help="Number of steps",
     )
-    optParser.add_option(
-       "--ard",
-        action='store_true',
-        default=False,
-        help="Connect Arduino", 
-    )
     options, args = optParser.parse_args()
     return options
 
@@ -361,5 +349,4 @@ if __name__ == "__main__":
     train = options.train
     epochs = options.epochs
     steps = options.steps
-    ard = options.ard
-    run(train=train,model_name=model_name,epochs=epochs,steps=steps,ard=ard)
+    run(train=train,model_name=model_name,epochs=epochs,steps=steps)
