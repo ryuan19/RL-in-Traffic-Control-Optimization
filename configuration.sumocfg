@@ -8,10 +8,10 @@
         <!-- <route-files value='maps/citysample.rou.xml'/> -->
         <!--net-file value='maps/city1.net.xml'/-->
         <!--route-files value='maps/city1.rou.xml'/-->
-        <!--net-file value='maps/intersection.net.xml'/-->
-        <!--route-files value='maps/intersection.rou.xml'/-->
-        <net-file value='maps/intersection_edited.net.xml'/>
-        <route-files value='maps/intersection_edited.rou.xml'/>
+        <!--net-file value='maps/intersection_edited.net.xml'/-->
+        <!--route-files value='maps/intersection_edited.rou.xml'/-->
+        <net-file value='maps/intersection_1.net.xml'/>
+        <route-files value='maps/intersection_1.rou.xml'/>
     </input>
     <time>
         <begin value='0'/>

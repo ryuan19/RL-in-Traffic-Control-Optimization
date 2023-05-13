@@ -128,6 +128,8 @@ class Agent:
     def store_transition(self, state, state_, action,reward, done,junction):
         index = self.memory[junction]["mem_cntr"] % self.max_mem
         self.memory[junction]["state_memory"][index] = state
+        #print(len(state_))
+        #print(len(self.memory[junction]["new_state_memory"][index]))
         self.memory[junction]["new_state_memory"][index] = state_
         self.memory[junction]['reward_memory'][index] = reward
         self.memory[junction]['terminal_memory'][index] = done
@@ -200,12 +202,14 @@ def run(train=True,model_name="model",epochs=50,steps=500,ard=False):
         gamma=0.99,
         epsilon=0.0,
         lr=0.1,
-        input_dims=4,
+        input_dims = 8,
+        #input_dims=4,
         # input_dims = len(all_junctions) * 4,
         fc1_dims=256,
         fc2_dims=256,
         batch_size=1024,
-        n_actions=4,
+        #n_actions=4,
+        n_actions = 4,
         junctions=junction_numbers,
     )
 
@@ -229,12 +233,20 @@ def run(train=True,model_name="model",epochs=50,steps=500,ard=False):
         print('AFTER THE SECOND TRACI START')
 
         print(f"epoch: {e}")
+        # select_lane = [
+        #     ["yyyrrrrrrrrr", "GGGrrrrrrrrr"],
+        #     ["rrryyyrrrrrr", "rrrGGGrrrrrr"],
+        #     ["rrrrrryyyrrr", "rrrrrrGGGrrr"],
+        #     ["rrrrrrrrryyy", "rrrrrrrrrGGG"],
+        # ]
+
         select_lane = [
-            ["yyyrrrrrrrrr", "GGGrrrrrrrrr"],
-            ["rrryyyrrrrrr", "rrrGGGrrrrrr"],
-            ["rrrrrryyyrrr", "rrrrrrGGGrrr"],
-            ["rrrrrrrrryyy", "rrrrrrrrrGGG"],
+            ["yyrrrryyrrrr", "GGrrrrGGrrrr"],
+            ["rryrrrrryrrr", "rrGrrrrrGrrr"],
+            ["rrryyrrrryyr", "rrrGGrrrrGGr"],
+            ["rrrrryrrrrry", "rrrrrGrrrrrG"],
         ]
+
 
         # select_lane = [
         #     ["yyyyrrrrrrrrrrrr", "GGGGrrrrrrrrrrrr"],
@@ -257,7 +269,8 @@ def run(train=True,model_name="model",epochs=50,steps=500,ard=False):
             prev_wait_time[junction] = 0
             prev_action[junction_number] = 0
             traffic_lights_time[junction] = 0
-            prev_vehicles_per_lane[junction_number] = [0] * 4
+            #prev_vehicles_per_lane[junction_number] = [0] * 4
+            prev_vehicles_per_lane[junction_number] = [0] * 8
             # prev_vehicles_per_lane[junction_number] = [0] * (len(all_junctions) * 4) 
             all_lanes.extend(list(traci.trafficlight.getControlledLanes(junction)))
 
@@ -273,7 +286,9 @@ def run(train=True,model_name="model",epochs=50,steps=500,ard=False):
 
                     #storing previous state and current state
                     reward = -1 *  waiting_time
+                    #print('STATE_ SET HERE: ', list(vehicles_per_lane.values()), len(list(vehicles_per_lane.values())), vehicles_per_lane)
                     state_ = list(vehicles_per_lane.values()) 
+                    #print('STATE SET HERE: ', len(prev_vehicles_per_lane[junction_number]), prev_vehicles_per_lane, prev_vehicles_per_lane[junction_number])
                     state = prev_vehicles_per_lane[junction_number]
                     prev_vehicles_per_lane[junction_number] = state_
                     brain.store_transition(state, state_, prev_action[junction_number],reward,(step==steps),junction_number)
