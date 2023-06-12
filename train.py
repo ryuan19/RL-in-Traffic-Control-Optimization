@@ -40,6 +40,20 @@ def get_waiting_time(lanes):
         waiting_time += traci.lane.getWaitingTime(lane)
     return waiting_time
 
+def longest_waiting_time(lanes):
+    max_waiting_time = 0
+    for lane in lanes:
+        time = traci.lane.getWaitingTime(lane)
+        if time > max_waiting_time:
+            max_waiting_time = time
+    return max_waiting_time
+
+def weighted_waiting_time(lanes):
+    waiting_time = 0
+    for lane in lanes:
+        waiting_time += (traci.lane.getWaitingTime(lane))**2
+    return waiting_time
+
 
 def phaseDuration(junction, phase_time, phase_state):
     traci.trafficlight.setRedYellowGreenState(junction, phase_state)
@@ -54,10 +68,12 @@ class Model(nn.Module):
         self.input_dims = input_dims
         self.fc1_dims = fc1_dims
         self.fc2_dims = fc2_dims
+        
         self.n_actions = n_actions
 
         self.linear1 = nn.Linear(self.input_dims, self.fc1_dims)
         self.linear2 = nn.Linear(self.fc1_dims, self.fc2_dims)
+        #self.linear3 = nn.Linear(self.fc2_dims, self.fc3_dims)
         self.linear3 = nn.Linear(self.fc2_dims, self.n_actions)
 
         self.optimizer = optim.Adam(self.parameters(), lr=self.lr)
@@ -68,6 +84,7 @@ class Model(nn.Module):
     def forward(self, state):
         x = F.relu(self.linear1(state))
         x = F.relu(self.linear2(x))
+        #x = F.relu(self.linear3(x))
         actions = self.linear3(x)
         return actions
 
@@ -95,6 +112,7 @@ class Agent:
         self.input_dims = input_dims
         self.fc1_dims = fc1_dims
         self.fc2_dims = fc2_dims
+        #self.fc3_dims = fc3_dims
         self.n_actions = n_actions
         self.action_space = [i for i in range(n_actions)]
         self.junctions = junctions
@@ -178,6 +196,7 @@ class Agent:
         self.Q_eval.optimizer.step()
 
         self.iter_cntr += 1
+        #print(self.epsilon)
         self.epsilon = (
             self.epsilon - self.epsilon_dec
             if self.epsilon > self.epsilon_end
@@ -193,7 +212,7 @@ def run(train=True,model_name="model",epochs=50,steps=500,ard=False):
     best_time = np.inf
     total_time_list = list()
     traci.start(
-        [checkBinary("sumo"), "-c", "configuration.sumocfg", "--tripinfo-output", "maps/tripinfo.xml"]
+        [checkBinary("sumo"), "-c", "/Users/serenazhang/Documents/traffic/traffic_rl/configuration.sumocfg", "--tripinfo-output", "maps/tripinfo.xml"]
     )
     all_junctions = traci.trafficlight.getIDList()
     junction_numbers = list(range(len(all_junctions)))
@@ -209,6 +228,7 @@ def run(train=True,model_name="model",epochs=50,steps=500,ard=False):
         fc2_dims=256,
         batch_size=1024,
         #n_actions=4,
+        epsilon_end=0.05,
         n_actions = 4,
         junctions=junction_numbers,
     )
@@ -218,7 +238,7 @@ def run(train=True,model_name="model",epochs=50,steps=500,ard=False):
     print(brain.Q_eval.device)
     traci.close()
     for e in range(epochs):
-        print('IN THE EPOCH LOOP')
+        #print('IN THE EPOCH LOOP')
         if train:
             traci.start(
             [checkBinary("sumo"), "-c", "configuration.sumocfg", "--tripinfo-output", "tripinfo.xml"]
@@ -230,7 +250,7 @@ def run(train=True,model_name="model",epochs=50,steps=500,ard=False):
             [sumoBinary, "-c", "configuration.sumocfg", "--tripinfo-output", "tripinfo.xml"]
             )
             
-        print('AFTER THE SECOND TRACI START')
+        #print('AFTER THE SECOND TRACI START')
 
         print(f"epoch: {e}")
         # select_lane = [
@@ -257,6 +277,8 @@ def run(train=True,model_name="model",epochs=50,steps=500,ard=False):
 
         step = 0
         total_time = 0
+        total_prio_time = 0
+        total_square_time = 0
         min_duration = 5
         
         traffic_lights_time = dict()
@@ -279,13 +301,21 @@ def run(train=True,model_name="model",epochs=50,steps=500,ard=False):
             for junction_number, junction in enumerate(all_junctions):
                 controled_lanes = traci.trafficlight.getControlledLanes(junction)
                 waiting_time = get_waiting_time(controled_lanes)
+                longest_wait_time = longest_waiting_time(controled_lanes)
+                square_wait_time = weighted_waiting_time(controled_lanes)
                 total_time += waiting_time
+                total_prio_time += longest_wait_time
+                total_square_time += square_wait_time
                 if traffic_lights_time[junction] == 0:
                     vehicles_per_lane = get_vehicle_numbers(controled_lanes)
                     # vehicles_per_lane = get_vehicle_numbers(all_lanes)
 
                     #storing previous state and current state
-                    reward = -1 *  waiting_time
+                    #reward = -1 *  waiting_time
+                    reward = -1 * longest_wait_time
+                    #reward = -1 * square_wait_time
+                    # reward = -1 *  waiting_time**(3/2)
+                    # reward = -1 *  waiting_time**(2)
                     #print('STATE_ SET HERE: ', list(vehicles_per_lane.values()), len(list(vehicles_per_lane.values())), vehicles_per_lane)
                     state_ = list(vehicles_per_lane.values()) 
                     #print('STATE SET HERE: ', len(prev_vehicles_per_lane[junction_number]), prev_vehicles_per_lane, prev_vehicles_per_lane[junction_number])
@@ -296,7 +326,7 @@ def run(train=True,model_name="model",epochs=50,steps=500,ard=False):
                     #selecting new action based on current state
                     lane = brain.choose_action(state_)
                     prev_action[junction_number] = lane
-                    phaseDuration(junction, 6, select_lane[lane][0])
+                    #phaseDuration(junction, 6, select_lane[lane][0])
                     phaseDuration(junction, min_duration + 10, select_lane[lane][1])
 
                     traffic_lights_time[junction] = min_duration + 10
@@ -306,6 +336,8 @@ def run(train=True,model_name="model",epochs=50,steps=500,ard=False):
                     traffic_lights_time[junction] -= 1
             step += 1
         print("total_time",total_time)
+        print("total_prio_time",total_prio_time)
+        print("total_square_time",total_square_time)
         total_time_list.append(total_time)
 
         if total_time < best_time:

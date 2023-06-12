@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2023-05-12 21:12:49 by Eclipse SUMO sumo Version 1.17.0
+<!-- generated on 2023-06-10 16:34:24 by Eclipse SUMO sumo Version 1.17.0
 <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
-        <net-file value="maps/intersection_1.net.xml"/>
-        <route-files value="maps/intersection_1.rou.xml"/>
+        <net-file value="/Users/serenazhang/Documents/traffic/traffic_rl/maps/intersection_2.net.xml"/>
+        <route-files value="/Users/serenazhang/Documents/traffic/traffic_rl/maps/intersection_2.rou.xml"/>
     </input>
 
     <output>
@@ -23,7 +23,7 @@
     </report>
 
     <traci_server>
-        <remote-port value="52656"/>
+        <remote-port value="49593"/>
     </traci_server>
 
 </configuration>
