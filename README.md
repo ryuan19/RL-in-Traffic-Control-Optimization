@@ -1,4 +1,4 @@
-# RL-Traffic
+# RL-Traffic (please email me if interested in full paper)
 
 Inefficient traffic light control at major road intersections can lead to significant problems such as
 long travel delays, wasteful energy usage, and even vehicular accidents. Unfortunately, existing traffic
